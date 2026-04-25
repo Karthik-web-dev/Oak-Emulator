@@ -1,0 +1,36 @@
+#Test folder
+roms/
+include/catch_amalgamated.hpp
+tests/catch_amalgamated.cpp
+
+#CLion/Jetbrains
+.idea/
+
+#CMake build
+cmake-build-*/
+build/
+
+#CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+#Build
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+*.pdb
+
+#OS
+.DS_Store
+Thumbs.db
+*~
