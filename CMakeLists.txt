@@ -1,34 +1,65 @@
-cmake_minimum_required(VERSION 4.1)
-project(GameBoyEmulator)
+cmake_minimum_required(VERSION 3.20)
+project(Oak-Emulator)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include_directories(include)
 
-add_executable(GameBoyEmulator src/CPU.cpp
-        src/main.cpp
-        src/Memory.cpp
-        src/ALU.cpp
-        src/Instructions.cpp)
+# ----------------------------
+# Core library (NO main.cpp)
+# ----------------------------
+add_library(oak_core
+    src/GameBoy.cpp
+    src/core/MMU.cpp
+    src/cpu/CPU.cpp
+    src/cpu/Instructions.cpp
+    src/memory/Cartridge.cpp
+    src/memory/IORegisters.cpp
+    src/memory/Ram.cpp
+    src/ppu/PPU.cpp
+    src/ppu/Renderer.cpp
+)
 
-add_executable(GameBoyEmuTests tests/cpu_tests.cpp
-        src/CPU.cpp
-        src/Memory.cpp
-        src/ALU.cpp
-        src/Instructions.cpp
-        tests/tests_main.cpp)
+# ----------------------------
+# Emulator executable
+# ----------------------------
+add_executable(Oak-Emulator
+    src/main.cpp
+)
 
-#include_directories(include)
+target_link_libraries(Oak-Emulator PRIVATE oak_core)
+
+# ----------------------------
+# Catch2 (auto download)
+# ----------------------------
 include(FetchContent)
 
 FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.5.0
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.5.0
 )
 
 FetchContent_MakeAvailable(Catch2)
 
-target_include_directories(GameBoyEmulator PRIVATE include)
-target_include_directories(GameBoyEmuTests PRIVATE include)
+# ----------------------------
+# Tests executable
+# ----------------------------
+add_executable(oak_tests
+    tests/cpu_tests.cpp
+    tests/tests_main.cpp
+    # add more test files here
+)
 
-target_link_libraries(GameBoyEmuTests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(oak_tests PRIVATE
+    oak_core
+    Catch2::Catch2WithMain
+)
+
+# ----------------------------
+# Enable testing
+# ----------------------------
+include(CTest)
+include(Catch)
+catch_discover_tests(oak_tests)

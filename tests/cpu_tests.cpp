@@ -1,11 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
-#include "CPU.h"
-#include "Memory.h"
-
+#include "../src/GameBoy.cpp"
+GameBoy gb;
+auto& cpu = gb.CPU;
+auto& memory = gb.MMU;
 
 TEST_CASE("LD r, r works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
     cpu.A = 0x00;
     cpu.B = 0x12;
     cpu.C = 0x34;
@@ -31,10 +30,8 @@ TEST_CASE("LD r, r works!") {
 }
 
 TEST_CASE("LD R, d8 works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
 
-    cpu.PC = 0;
+    cpu.PC = 0xC000;
     memory.write8(cpu.PC+1, 0xAB);
 
     for (int dest = 0; dest < 8; dest++) {
@@ -46,10 +43,8 @@ TEST_CASE("LD R, d8 works!") {
 }
 
 TEST_CASE("LD RR, D16 works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
 
-    cpu.PC = 0;
+    cpu.PC = 0xC000;
     memory.write16(cpu.PC+1, 0xABCD);
 
     for (int dest = 0; dest < 4; dest++) {
@@ -60,9 +55,6 @@ TEST_CASE("LD RR, D16 works!") {
 }
 
 TEST_CASE("LD A,(rr) works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     // Set BC and DE registers
     cpu.B = 0x12;
     cpu.C = 0x34;
@@ -85,9 +77,6 @@ TEST_CASE("LD A,(rr) works!") {
 }
 
 TEST_CASE("LD (rr), A works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     cpu.A = 0x99;
     cpu.B = 0x12;
     cpu.C = 0x34;
@@ -109,9 +98,6 @@ TEST_CASE("LD (rr), A works!") {
 }
 
 TEST_CASE("LD A, nn") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     cpu.PC = 0;
     memory.write8(0x1234, 0xAB);
     memory.write16(cpu.PC+1, 0x1234);
@@ -120,9 +106,6 @@ TEST_CASE("LD A, nn") {
 }
 
 TEST_CASE("LD nn, A") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     cpu.PC = 0;
     cpu.A = 0x12;
     memory.write8(0xAB, 0x12);
@@ -133,9 +116,6 @@ TEST_CASE("LD nn, A") {
 
 TEST_CASE("INC r works!") {
     //00RRRXXX
-    MEMORY memory;
-    SM83 cpu(memory);
-
     cpu.A = 0x01;
     cpu.B = 0x01;
     cpu.C = 0x01;
@@ -153,8 +133,14 @@ TEST_CASE("INC r works!") {
 }
 
 TEST_CASE("INC RR works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
+    cpu.A = 0x00;
+    cpu.B = 0x00;
+    cpu.C = 0x00;
+    cpu.D = 0x00;
+    cpu.E = 0x00;
+    cpu.H = 0x00;
+    cpu.L = 0x00;
+
     SECTION("INC BC") {
         cpu.inc_rr(0x03);
         REQUIRE(cpu.getBC() == 0x01);
@@ -168,6 +154,7 @@ TEST_CASE("INC RR works!") {
         REQUIRE(cpu.getHL() == 0x01);
     }
     SECTION("INC SP") {
+        cpu.SP = 0x00;
         cpu.inc_rr(0x33);
         REQUIRE(cpu.SP == 0x01);
     }
@@ -175,8 +162,6 @@ TEST_CASE("INC RR works!") {
 
 TEST_CASE("DEC r works!") {
     //00RRRXXX
-    MEMORY memory;
-    SM83 cpu(memory);
 
     cpu.A = 0x01;
     cpu.B = 0x01;
@@ -188,46 +173,41 @@ TEST_CASE("DEC r works!") {
 
     for (int dest = 0; dest < 8; dest++) {
         if (dest == 6) continue;
-        const uint8_t opcode = 0x04 | (dest << 3);
+        const uint8_t opcode = 0x05 | (dest << 3);
         cpu.dec_r(opcode);
         REQUIRE(cpu.getR(dest) == 0x00);
     }
 }
 
 TEST_CASE("DEC RR works!") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     cpu.A = 0x01;
-    cpu.B = 0x01;
+    cpu.B = 0x00;
     cpu.C = 0x01;
-    cpu.D = 0x01;
+    cpu.D = 0x00;
     cpu.E = 0x01;
-    cpu.H = 0x01;
+    cpu.H = 0x00;
     cpu.L = 0x01;
 
     SECTION("DEC BC") {
-        cpu.dec_rr(0x03);
+        cpu.dec_rr(0x0B);
         REQUIRE(cpu.getBC() == 0x00);
     }
     SECTION("DEC DE") {
-        cpu.dec_rr(0x13);
+        cpu.dec_rr(0x1B);
         REQUIRE(cpu.getDE() == 0x00);
     }
     SECTION("DEC HL") {
-        cpu.dec_rr(0x23);
+        cpu.dec_rr(0x2B);
         REQUIRE(cpu.getHL() == 0x00);
     }
     SECTION("DEC SP") {
-        cpu.dec_rr(0x33);
+        cpu.SP = 0x01;
+        cpu.dec_rr(0x3B);
         REQUIRE(cpu.SP == 0x00);
     }
 }
 
 TEST_CASE("ADD A, r") {
-    MEMORY memory;
-    SM83 cpu(memory);
-
     for (int dest = 0; dest < 8; dest++) {
         if (dest == 6) continue;
 
@@ -236,16 +216,205 @@ TEST_CASE("ADD A, r") {
         // REQUIRE();
     }
 }
-void test_add_a_n();
-void test_add_hl_rr();
-void test_add_sp_n();
 
-void test_sub_a_r();
-void test_sub_a_n();
-void test_sub_hl_rr();
-void test_sub_sp_n();
+TEST_CASE("INC r flag tests") {
+    SECTION("Z flag set when result is 0") {
+        cpu.A = 0xFF;
+        cpu.inc_r(0x3C); // INC A
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+    }
+    SECTION("H flag set on half carry") {
+        cpu.A = 0x0F;
+        cpu.inc_r(0x3C); // INC A
+        REQUIRE(cpu.A == 0x10);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+        REQUIRE((cpu.F & FLAG_Z) == 0);
+    }
+    SECTION("No flags set on normal INC") {
+        cpu.A = 0x01;
+        cpu.inc_r(0x3C); // INC A
+        REQUIRE(cpu.A == 0x02);
+        REQUIRE((cpu.F & FLAG_Z) == 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+        REQUIRE((cpu.F & FLAG_H) == 0);
+    }
+    SECTION("C flag unchanged") {
+        cpu.F = FLAG_C;
+        cpu.A = 0x01;
+        cpu.inc_r(0x3C);
+        REQUIRE((cpu.F & FLAG_C) != 0); // C preserved
+    }
+}
 
-void test_rlca();
-void test_rrca();
-void test_rla();
-void test_stop();
+TEST_CASE("DEC r flag tests") {
+    SECTION("Z flag set when result is 0") {
+        cpu.A = 0x01;
+        cpu.dec_r(0x3D); // DEC A
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+        REQUIRE((cpu.F & FLAG_H) == 0);
+    }
+    SECTION("H flag set on half borrow") {
+        cpu.A = 0x10;
+        cpu.dec_r(0x3D); // DEC A
+        REQUIRE(cpu.A == 0x0F);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+    }
+    SECTION("Wrap around 0x00 to 0xFF") {
+        cpu.A = 0x00;
+        cpu.dec_r(0x3D);
+        REQUIRE(cpu.A == 0xFF);
+        REQUIRE((cpu.F & FLAG_Z) == 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+    }
+    SECTION("C flag unchanged") {
+        cpu.F = FLAG_C;
+        cpu.A = 0x01;
+        cpu.dec_r(0x3D);
+        REQUIRE((cpu.F & FLAG_C) != 0); // C preserved
+    }
+}
+
+TEST_CASE("ADD A, r flag tests") {
+    SECTION("Z flag set when result is 0") {
+        cpu.A = 0xFF;
+        cpu.B = 0x01;
+        cpu.add_a_r(0x80); // ADD A, B
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_C) != 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+    }
+    SECTION("H flag on half carry") {
+        cpu.A = 0x0F;
+        cpu.B = 0x01;
+        cpu.add_a_r(0x80);
+        REQUIRE(cpu.A == 0x10);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+        REQUIRE((cpu.F & FLAG_C) == 0);
+    }
+    SECTION("C flag on carry") {
+        cpu.A = 0xFF;
+        cpu.B = 0x02;
+        cpu.add_a_r(0x80);
+        REQUIRE(cpu.A == 0x01);
+        REQUIRE((cpu.F & FLAG_C) != 0);
+        REQUIRE((cpu.F & FLAG_Z) == 0);
+    }
+    SECTION("No flags on normal add") {
+        cpu.A = 0x01;
+        cpu.B = 0x01;
+        cpu.add_a_r(0x80);
+        REQUIRE(cpu.A == 0x02);
+        REQUIRE(cpu.F == 0x00);
+    }
+}
+
+TEST_CASE("SUB A, r flag tests") {
+    SECTION("Z flag set when result is 0") {
+        cpu.A = 0x05;
+        cpu.B = 0x05;
+        cpu.sub_a_r(0x90); // SUB A, B
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+        REQUIRE((cpu.F & FLAG_C) == 0);
+    }
+    SECTION("C flag set when borrow") {
+        cpu.A = 0x00;
+        cpu.B = 0x01;
+        cpu.sub_a_r(0x90);
+        REQUIRE(cpu.A == 0xFF);
+        REQUIRE((cpu.F & FLAG_C) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+    }
+    SECTION("H flag set on half borrow") {
+        cpu.A = 0x10;
+        cpu.B = 0x01;
+        cpu.sub_a_r(0x90);
+        REQUIRE(cpu.A == 0x0F);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+    }
+}
+
+TEST_CASE("AND flag tests") {
+    SECTION("Z flag when result is 0") {
+        cpu.A = 0xF0;
+        cpu.B = 0x0F;
+        cpu._and_r(0xA0); // AND A, B
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+        REQUIRE((cpu.F & FLAG_C) == 0);
+    }
+    SECTION("H always set") {
+        cpu.A = 0xFF;
+        cpu.B = 0xFF;
+        cpu._and_r(0xA0);
+        REQUIRE((cpu.F & FLAG_H) != 0);
+    }
+}
+
+TEST_CASE("OR flag tests") {
+    SECTION("Z flag when result is 0") {
+        cpu.A = 0x00;
+        cpu.B = 0x00;
+        cpu.or_r(0xB0); // OR A, B
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+        REQUIRE((cpu.F & FLAG_C) == 0);
+        REQUIRE((cpu.F & FLAG_H) == 0);
+    }
+    SECTION("No flags on normal OR") {
+        cpu.A = 0xF0;
+        cpu.B = 0x0F;
+        cpu.or_r(0xB0);
+        REQUIRE(cpu.A == 0xFF);
+        REQUIRE(cpu.F == 0x00);
+    }
+}
+
+TEST_CASE("XOR flag tests") {
+    SECTION("Z flag when result is 0") {
+        cpu.A = 0xFF;
+        cpu.B = 0xFF;
+        cpu._xor_r(0xA8); // XOR A, B
+        REQUIRE(cpu.A == 0x00);
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) == 0);
+        REQUIRE((cpu.F & FLAG_C) == 0);
+        REQUIRE((cpu.F & FLAG_H) == 0);
+    }
+}
+
+TEST_CASE("CP flag tests") {
+    SECTION("Z flag when equal") {
+        cpu.A = 0x05;
+        cpu.B = 0x05;
+        cpu.cp_r(0xB8); // CP A, B
+        REQUIRE(cpu.A == 0x05); // A unchanged
+        REQUIRE((cpu.F & FLAG_Z) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+    }
+    SECTION("C flag when A < r") {
+        cpu.A = 0x01;
+        cpu.B = 0x02;
+        cpu.cp_r(0xB8);
+        REQUIRE((cpu.F & FLAG_C) != 0);
+        REQUIRE((cpu.F & FLAG_N) != 0);
+    }
+}
+
+//Prefixed:
+TEST_CASE("BIT R") {
+
+}

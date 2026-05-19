@@ -30,6 +30,10 @@ compile_commands.json
 *.lib
 *.pdb
 
+#Test Roms
+*.gb
+roms/ 
+
 #OS
 .DS_Store
 Thumbs.db
